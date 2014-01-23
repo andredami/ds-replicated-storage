@@ -133,7 +133,7 @@ public class HistoryBuffer {
 	 * @param lastSequence
 	 *            the sequence number of the {@link Message} to be recorded
 	 */
-	public void record(Long process, Long lastSequence) {
+	public void record(long process, long lastSequence) {
 		if (!lastAckVect.containsKey(process)
 				|| lastAckVect.get(process) < lastSequence) {
 			lastAckVect.put(process, lastSequence);
