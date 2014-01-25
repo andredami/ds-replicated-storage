@@ -25,7 +25,7 @@ import java.rmi.RemoteException;
 public class Client {
 	private static final String NON_NEWLINE_WHITESPACES = "[ \\t\\x0B\\f]+";
 	private static final Integer DEFAULT_RMI_PORT = 1099;
-	private static final String SERVER_REGISTERED_NAME = "/Server";
+	private static final String SERVER_REGISTERED_NAME = "Server";
 
 	private static ServerRemoteInterface server;
 
@@ -76,9 +76,9 @@ public class Client {
 		}
 
 		// Connection to server
-		if (System.getSecurityManager() == null) {
-			System.setSecurityManager(new SecurityManager());
-		}
+//		if (System.getSecurityManager() == null) {
+//			System.setSecurityManager(new SecurityManager());
+//		}
 
 		String serverUri = "//" + serverIpAddress + ":"
 				+ Integer.toString(port);
@@ -112,7 +112,7 @@ public class Client {
 				do {
 					input = inputStream.readLine().split(
 							NON_NEWLINE_WHITESPACES);
-				} while (input != null && input.length > 0);
+				} while (input != null && input.length == 0);
 
 				// Input Action Validation
 				action = Action.valueOf(input[0].toUpperCase());
@@ -126,6 +126,7 @@ public class Client {
 					if (action != Action.GET) {
 						action = Action.NONE;
 					}
+					break;
 				case 3:
 					if (action != Action.PUT) {
 						action = Action.NONE;
@@ -159,11 +160,13 @@ public class Client {
 					showUsage(true);
 				}
 				break;
+			case EXIT:
+				break;
 			default:
 				showUsage(true);
 				break;
 			}
-		} while (action == Action.EXIT);
+		} while (action != Action.EXIT);
 
 		System.out.println("Server is closing...");
 		server = null;

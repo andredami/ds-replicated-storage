@@ -31,7 +31,7 @@ public class StorageMap {
 	 * @throws NullPointerException
 	 *             if the specified key is null
 	 */
-	public Integer getValue(Integer key) {
+	public synchronized Integer getValue(Integer key) {
 		if (key == null) {
 			throw new NullPointerException(this.getClass().getName()
 					+ " do not allow null keys.");
@@ -52,7 +52,7 @@ public class StorageMap {
 	 * @throws NullPointerException
 	 *             if the specified key is null
 	 */
-	public void putValue(Integer key, Integer value) {
+	public synchronized void putValue(Integer key, Integer value) {
 		if (key == null) {
 			throw new NullPointerException(this.getClass().getName()
 					+ " do not allow null keys.");
