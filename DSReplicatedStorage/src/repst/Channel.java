@@ -46,9 +46,9 @@ public class Channel {
 
 		@Override
 		public void run() {
-			while (true) {
-				// TODO read from socket and call onMulticastReceived
-			}
+			//while (true) {
+			// TODO read from socket and call onMulticastReceived
+			//}
 
 		}
 	};
