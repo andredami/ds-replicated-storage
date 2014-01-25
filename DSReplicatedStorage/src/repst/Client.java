@@ -168,7 +168,7 @@ public class Client {
 			}
 		} while (action != Action.EXIT);
 
-		System.out.println("Server is closing...");
+		System.out.println("Client is closing...");
 		server = null;
 		return;
 	}
