@@ -59,9 +59,9 @@ public class Channel {
 		if (msg.sequenceNumber == lastSequence + 1) {
 			lastSequence = msg.sequenceNumber;
 			putInDeliveryQueue(msg);
-		} else {
+		} else if(msg.sequenceNumber>lastSequence + 1){
 			discardAndSendNack();
-		}
+		}//else it is a duplicated message
 	}
 
 	private Runnable readFromSocket = new Runnable() {
