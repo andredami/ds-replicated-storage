@@ -12,7 +12,6 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.Iterator;
@@ -90,11 +89,7 @@ public class Channel {
 		}
 	};
 
-	private void discardAndSendNack() {
-		// TODO Auto-generated method stub
-
-	}
-
+	
 	/**
 	 * Performed in single thread readFromSocket. insert at the end of the
 	 * delivery queue. If the message is in the holdbackQueue the reference to
@@ -173,5 +168,11 @@ public class Channel {
 	private void sendNack() {
 		// TODO calls remote getLost... on Sequencer
 	}
+	
+	private void discardAndSendNack() {
+		// TODO Auto-generated method stub
+
+	}
+
 
 }
