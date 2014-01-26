@@ -3,8 +3,10 @@
  */
 package repst;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -21,16 +23,12 @@ import java.util.concurrent.Executors;
  */
 public class Server extends UnicastRemoteObject implements
 		ServerRemoteInterface {
-
-	/**
-	 * 
-	 */
-	private static final long serialVersionUID = -7651487551213012175L;
+	
+	static final long serialVersionUID = -7651487551213012175L;
 	private static final String port = "1099";
 
 	protected Server() throws RemoteException {
 		super();
-		// TODO Auto-generated constructor stub
 	}
 
 	private StorageMap storage = new StorageMap();
@@ -40,6 +38,11 @@ public class Server extends UnicastRemoteObject implements
 
 	// TODO main - createChannel calls initialize
 	public static void main(String[] args) {
+		if(args.length==0){
+			System.err.println("USAGE: give me the sequencer registry address!");
+			return;
+		}
+		String seqHost=args[0];
 		Registry registry;
 		System.out.println("Creating a rmiregistry...");
 		try {
@@ -49,7 +52,6 @@ public class Server extends UnicastRemoteObject implements
 			return;
 		}
 
-		// initialize server object
 		System.out.println("Creating remote server object...");
 		Server server;
 		try {
@@ -59,8 +61,14 @@ public class Server extends UnicastRemoteObject implements
 			return;
 		}
 		
-		System.out.println("Remote object created...");
-		server.initialize();
+		System.out.println("Initializing channel...");
+		try {
+			server.initialize(seqHost,Integer.parseInt(port));
+		} catch (NumberFormatException | NotBoundException | IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+			return;
+		}
 
 		System.out.println("Binding to rmiregistry...");
 		try {
@@ -81,8 +89,8 @@ public class Server extends UnicastRemoteObject implements
 
 	}
 
-	private void initialize() {
-		channel.initialize();
+	private void initialize(String host,int port) throws NotBoundException, IOException {
+		channel.initialize(host,port);
 		pool.execute(readloop);
 	}
 
@@ -93,7 +101,6 @@ public class Server extends UnicastRemoteObject implements
 			while (true) {
 				fetchFormChannel();
 			}
-
 		}
 	};
 
@@ -140,7 +147,7 @@ public class Server extends UnicastRemoteObject implements
 		Payload p;
 		try {
 			p = (Payload) channel.pop();
-			performAndnotifyWriteOp(p);
+			performAndNotifyWriteOp(p);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -154,7 +161,7 @@ public class Server extends UnicastRemoteObject implements
 	 * @param pNew
 	 *            the paylod delivered by channel.
 	 */
-	private void performAndnotifyWriteOp(Payload pNew) {
+	private void performAndNotifyWriteOp(Payload pNew) {
 		Payload pOld = null;
 		boolean my = false;
 		synchronized (operations) {
