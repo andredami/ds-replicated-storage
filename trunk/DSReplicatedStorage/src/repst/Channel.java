@@ -3,7 +3,18 @@
  */
 package repst;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.net.DatagramPacket;
+import java.net.InetAddress;
+import java.net.MulticastSocket;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
@@ -22,20 +33,32 @@ public class Channel {
 	private LinkedList<Message> deliveryQueue = new LinkedList<Message>();
 	private LinkedList<Message> holdBackQueue = new LinkedList<Message>();
 	private ExecutorService pool = Executors.newCachedThreadPool();
+	private SequencerRemoteInterface sequencer;
+	private MulticastSocket multicastSocket;
 
-	public void initialize() {
-		//TODO open and initialize the ip multicast socket 
+	public void initialize(String host, int port) throws NotBoundException,
+			IOException {
+
+		Registry reg = LocateRegistry.getRegistry(host, port);
+		sequencer = (SequencerRemoteInterface) reg.lookup("Sequencer");
+
+		// open and initialize the ip multicast socket
+		// Which port should we listen to
+		int gPort = 5000;
+		// Which address
+		String groupAddr = "225.4.5.6";
+		multicastSocket = new MulticastSocket(port);
+		multicastSocket.joinGroup(InetAddress.getByName(groupAddr));
+
 		// TODO remote call to sequencer getNewProcessId() and stores it in
 		// processId
+
 		pool.execute(readFromSocket);
 	}
 
-	
-
-	
 	private void onMulticastReceived(OrderedMessage msg) {
 		if (msg.sequenceNumber == lastSequence + 1) {
-			lastSequence=msg.sequenceNumber;
+			lastSequence = msg.sequenceNumber;
 			putInDeliveryQueue(msg);
 		} else {
 			discardAndSendNack();
@@ -46,9 +69,23 @@ public class Channel {
 
 		@Override
 		public void run() {
-			//while (true) {
-			// TODO read from socket and call onMulticastReceived
-			//}
+			byte[] recvBuf = new byte[1024];
+			DatagramPacket packet = new DatagramPacket(recvBuf, recvBuf.length);
+			while (true) {
+				// read from socket and call onMulticastReceived
+				try {
+					multicastSocket.receive(packet);
+					ByteArrayInputStream byteStream = new ByteArrayInputStream(
+							recvBuf);
+					ObjectInputStream is = new ObjectInputStream(
+							new BufferedInputStream(byteStream));
+					OrderedMessage msg = (OrderedMessage) is.readObject();
+					is.close();
+					onMulticastReceived(msg);
+				} catch (IOException | ClassNotFoundException e) {
+					e.printStackTrace();
+				}
+			}
 
 		}
 	};
@@ -132,6 +169,7 @@ public class Channel {
 	private void sendToSequencer(Message m) {
 		// TODO Auto-generated method stub
 	}
+
 	private void sendNack() {
 		// TODO calls remote getLost... on Sequencer
 	}
