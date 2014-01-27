@@ -17,6 +17,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.SortedSet;
@@ -28,14 +29,16 @@ import java.util.concurrent.Executors;
  * 
  */
 public class Sequencer extends UnicastRemoteObject implements SequencerRemoteInterface{
+	private static final int MULTICAST_GROUP_PORT = 5000;
+	private static final String IP_MULTICAST_GROUP = "225.4.5.6";
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = -4620786144190360054L;
 	private static final String port = "1099";
 
-	private static Long nextId = (long) 0;
-	private static Long nextSequence = (long) 0;
+	private static Long nextId = (long) 1;
+	private static Long nextSequence = (long) 1;
 	private HistoryBuffer buffer;
 	
 	private ExecutorService pool = Executors.newCachedThreadPool();
@@ -70,54 +73,46 @@ public class Sequencer extends UnicastRemoteObject implements SequencerRemoteInt
 		
 		System.out.println("Binding to rmiregistry...");
 		try {
-			try {
-				registry.bind("Sequencer", sequencer);
-			} catch (AlreadyBoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		} catch (AccessException e) {
-			e.printStackTrace();
-			return;
+			registry.rebind("Sequencer", sequencer);
+		
 		} catch (RemoteException e) {
 			e.printStackTrace();
 			return;
 		}
 		
 		try {
-			address = InetAddress.getByName("225.4.5.6");
+			address = InetAddress.getByName(IP_MULTICAST_GROUP);
 		} catch (UnknownHostException e1) {
 			e1.printStackTrace();
 		}
 		
 		try {
-			multicastSocket = new MulticastSocket(1099);
+			multicastSocket = new MulticastSocket(MULTICAST_GROUP_PORT);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
 		
 		Scanner in = new Scanner(System.in);
-		synchronized(lock){
-			System.out.println("Tipe start");
-			in.nextLine();
-		}
 		
-		do{
-			in.nextLine();
-		}while(!in.equals("finish"));
+		System.out.println("Tipe start");
+		in.nextLine();
+		
+		System.out.println("Ready to start with "+(nextId-1)+" replicas");
+     	sequencer.buffer=new HistoryBuffer((int) (sequencer.nextId-1));
 	}
 	
-	public synchronized Long getNewProcessId() {
-		synchronized(lock){
-		nextId++;
+	public Long getNewProcessId() {
+		long assignedId;
+		synchronized(nextId){
+			assignedId=nextId;
+			nextId++;
 		}
-		return nextId;
+		return assignedId;
 	}
 
 	public synchronized void forwardMessage(Message msg) {
 		OrderedMessage ordMsg = new OrderedMessage(nextSequence, msg);
-		
 		buffer.record(nextSequence, ordMsg);
 		nextSequence++;
 		pool.execute(new Sender(ordMsg));
@@ -146,7 +141,7 @@ public class Sequencer extends UnicastRemoteObject implements SequencerRemoteInt
 			    
 			    
 			    byte[] sendBuf = byteStream.toByteArray();
-			    DatagramPacket packet = new DatagramPacket(sendBuf, sendBuf.length, address, 1099);
+			    DatagramPacket packet = new DatagramPacket(sendBuf, sendBuf.length, address, MULTICAST_GROUP_PORT);
 			    int byteCount = packet.getLength();
 			    multicastSocket.send(packet);
 			    os.close();
@@ -163,7 +158,7 @@ public class Sequencer extends UnicastRemoteObject implements SequencerRemoteInt
 	}
 
 	public List<OrderedMessage> getLostMessages(Long afterSequence) {
-		return (List<OrderedMessage>) buffer.getAllLostMsgAfter(afterSequence);
+		return new ArrayList<OrderedMessage>(buffer.getAllLostMsgAfter(afterSequence));
 	}
 
 

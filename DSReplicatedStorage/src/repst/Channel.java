@@ -12,10 +12,12 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -25,9 +27,9 @@ import java.util.concurrent.Executors;
  */
 public class Channel {
 
-	private Long lastSequence;
-	private Long mySequence;
-	private Long processId;
+	private long lastSequence= 0;
+	private Long mySequence=(long) 0;
+	private long processId=0;
 
 	private LinkedList<Message> deliveryQueue = new LinkedList<Message>();
 	private LinkedList<Message> holdBackQueue = new LinkedList<Message>();
@@ -46,11 +48,10 @@ public class Channel {
 		int gPort = 5000;
 		// Which address
 		String groupAddr = "225.4.5.6";
-		multicastSocket = new MulticastSocket(port);
+		multicastSocket = new MulticastSocket(gPort);
 		multicastSocket.joinGroup(InetAddress.getByName(groupAddr));
 
-		// TODO remote call to sequencer getNewProcessId() and stores it in
-		// processId
+		processId=sequencer.getNewProcessId();
 
 		pool.execute(readFromSocket);
 	}
@@ -59,9 +60,9 @@ public class Channel {
 		if (msg.sequenceNumber == lastSequence + 1) {
 			lastSequence = msg.sequenceNumber;
 			putInDeliveryQueue(msg);
-		} else if(msg.sequenceNumber>lastSequence + 1){
+		} else if (msg.sequenceNumber > lastSequence + 1) {
 			discardAndSendNack();
-		}//else it is a duplicated message
+		}// else it is a duplicated message
 	}
 
 	private Runnable readFromSocket = new Runnable() {
@@ -89,7 +90,6 @@ public class Channel {
 		}
 	};
 
-	
 	/**
 	 * Performed in single thread readFromSocket. insert at the end of the
 	 * delivery queue. If the message is in the holdbackQueue the reference to
@@ -115,9 +115,10 @@ public class Channel {
 				}
 			}
 		}
-
-		deliveryQueue.addLast(toBedelivered);
-		deliveryQueue.notifyAll();
+		synchronized (deliveryQueue) {
+			deliveryQueue.addLast(toBedelivered);
+			deliveryQueue.notifyAll();
+		}
 	}
 
 	/**
@@ -162,17 +163,32 @@ public class Channel {
 	}
 
 	private void sendToSequencer(Message m) {
-		// TODO Auto-generated method stub
+		try {
+			sequencer.forwardMessage(m);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
 	}
 
-	private void sendNack() {
-		// TODO calls remote getLost... on Sequencer
-	}
-	
 	private void discardAndSendNack() {
-		// TODO Auto-generated method stub
+		List<OrderedMessage> lostM = null;
+		try {
+			lostM = sequencer.getLostMessages(lastSequence);
+		} catch (RemoteException e) {
+			e.printStackTrace();
+			return;
+		}
+		long maxSequence = lastSequence + lostM.size();
+
+		for (long i = lastSequence + 1; i <= maxSequence; i++) {
+			for (OrderedMessage m : lostM) {
+				if (m.sequenceNumber == lastSequence+1) {
+					lastSequence=m.sequenceNumber;
+					putInDeliveryQueue(m);
+				}
+			}
+		}
 
 	}
-
 
 }
