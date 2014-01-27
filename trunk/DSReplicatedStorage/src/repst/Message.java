@@ -11,7 +11,7 @@ import java.io.Serializable;
  * @author Andrea
  * 
  */
-public class Message {
+public class Message implements Serializable {
 
 	private static long nextId = (long) 0;
 
