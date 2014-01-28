@@ -92,10 +92,20 @@ public class Sequencer extends UnicastRemoteObject implements SequencerRemoteInt
 			e.printStackTrace();
 		}
 		
+		InetAddress mHost = null;
+		try {
+			mHost = InetAddress.getLocalHost();
+			System.out.println("Server is operative at:"
+					+ mHost.getHostAddress() + ":" + port);
+		} catch (UnknownHostException e) {
+			System.out
+					.println("Server should be operative, but i am unable to retrieve localhost information. ");
+		}
+		
 		
 		Scanner in = new Scanner(System.in);
 		
-		System.out.println("Tipe start");
+		System.out.println("Press newline to start:");
 		in.nextLine();
 		
 		System.out.println("Ready to start with "+(nextId-1)+" replicas");
