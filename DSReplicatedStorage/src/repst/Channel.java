@@ -182,6 +182,7 @@ public class Channel {
 			public void run() {
 				try {
 					sequencer.recordHeartbeat(new Message(null, processId, lastSequence));
+					System.out.println("HeartBeat sent.");
 				} catch (RemoteException e) {
 				}
 			}
