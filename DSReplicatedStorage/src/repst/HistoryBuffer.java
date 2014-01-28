@@ -72,6 +72,7 @@ public class HistoryBuffer {
 	}
 
 	private void trim() {
+		System.out.println("Trimming memory...");
 		operationNumSinceLastTrim = 0;
 		// Trim can take place only if all the processes has already
 		// acknowledged at
@@ -87,8 +88,9 @@ public class HistoryBuffer {
 				lastAckByAll = v;
 			} else if (v < lastAckByAll) {
 				lastAckByAll = v;
-			}
+			}	
 		}
+		System.out.println("Trimmed history buffer after sequence"+lastAckByAll);
 
 		// Removing all the messages acknowledged by all the processes
 		Iterator<Entry<Long, Message>> i = buffer.entrySet().iterator();
