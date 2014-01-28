@@ -104,7 +104,7 @@ public class Channel {
 	 * @param msg
 	 */
 	private void putInDeliveryQueue(OrderedMessage msg) {
-		System.out.println("Delivering message "+msg.messageId);
+		System.out.println("Delivering message "+msg.processId+":"+msg.messageId+" sequence:"+msg.sequenceNumber);
 		Message toBedelivered = msg;
 		if (msg.processId == processId) {
 			synchronized (holdBackQueue) {
