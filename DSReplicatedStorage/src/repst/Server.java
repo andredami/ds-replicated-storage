@@ -127,10 +127,9 @@ public class Server extends UnicastRemoteObject implements
 		synchronized (operations) {
 			operations.add(operations.size(), p);
 		}
-
-		channel.write(p);// asynch call
 		try {
 			synchronized (p) {
+				channel.write(p);// asynch call
 				p.wait();	
 			}
 		} catch (InterruptedException e) {
