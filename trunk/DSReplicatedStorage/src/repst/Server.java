@@ -123,6 +123,7 @@ public class Server extends UnicastRemoteObject implements
 	 */
 	@Override
 	public synchronized void writeValue(Integer key, Integer value) {
+		System.out.println("Write request received: key="+key+" value="+value);
 		Payload p = new Payload(key, value);
 		synchronized (operations) {
 			operations.add(operations.size(), p);

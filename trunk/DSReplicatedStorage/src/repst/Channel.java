@@ -104,6 +104,7 @@ public class Channel {
 	 * @param msg
 	 */
 	private void putInDeliveryQueue(OrderedMessage msg) {
+		System.out.println("Delivering message "+msg.messageId);
 		Message toBedelivered = msg;
 		if (msg.processId == processId) {
 			synchronized (holdBackQueue) {
@@ -189,6 +190,7 @@ public class Channel {
 	}
 
 	private void sendToSequencer(Message m) {
+		System.out.println("Forwarding message "+m.messageId+"to sequencer.");
 		try {
 			sequencer.forwardMessage(m);
 		} catch (RemoteException e) {
@@ -197,6 +199,7 @@ public class Channel {
 	}
 
 	private void discardAndSendNack() {
+		System.out.println("Asking for lost messages with last sequence"+lastSequence);
 		List<OrderedMessage> lostM = null;
 		try {
 			lostM = sequencer.getLostMessages(lastSequence);
