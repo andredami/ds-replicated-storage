@@ -46,7 +46,7 @@ public class Server extends UnicastRemoteObject implements
 		Registry registry;
 		System.out.println("Creating a rmiregistry...");
 		try {
-			registry=LocateRegistry.getRegistry(1099);
+			registry=LocateRegistry.createRegistry(1099);
 		} catch (RemoteException e1) {
 			e1.printStackTrace();
 			return;
