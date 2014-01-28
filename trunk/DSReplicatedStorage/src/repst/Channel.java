@@ -18,6 +18,8 @@ import java.rmi.registry.Registry;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -36,6 +38,9 @@ public class Channel {
 	private ExecutorService pool = Executors.newCachedThreadPool();
 	private SequencerRemoteInterface sequencer;
 	private MulticastSocket multicastSocket;
+	
+	private Timer timer;
+	private static final long TIMER_DELAY = 20*1000;
 
 	public void initialize(String host, int port) throws NotBoundException,
 			IOException {
@@ -50,9 +55,10 @@ public class Channel {
 		String groupAddr = "239.0.0.1";
 		multicastSocket = new MulticastSocket(gPort);
 		multicastSocket.joinGroup(InetAddress.getByName(groupAddr));
-
 		processId=sequencer.getNewProcessId();
-
+		
+		resetHeartbeatTimer();
+		
 		pool.execute(readFromSocket);
 	}
 
@@ -159,7 +165,27 @@ public class Channel {
 			holdBackQueue.addLast(m);
 		}
 		sendToSequencer(m);
+		resetHeartbeatTimer();
+		
 
+	}
+	
+	private void resetHeartbeatTimer(){
+		if(timer != null){
+			timer.cancel();
+		}
+		timer = new Timer("HeartbeatTimer");
+		TimerTask tick = new TimerTask() {
+			
+			@Override
+			public void run() {
+				try {
+					sequencer.recordHeartbeat(new Message(null, processId, lastSequence));
+				} catch (RemoteException e) {
+				}
+			}
+		};
+		timer.scheduleAtFixedRate(tick, TIMER_DELAY, TIMER_DELAY);
 	}
 
 	private void sendToSequencer(Message m) {
