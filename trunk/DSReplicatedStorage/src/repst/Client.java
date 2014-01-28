@@ -46,6 +46,12 @@ public class Client {
 		boolean isPortSet = false;
 		int port = DEFAULT_RMI_PORT;
 
+		if(args.length == 0){
+			System.err.println("No Server IP supplied.");
+			System.err.println("Command line syntax: serverIpAddress [-p:port]");
+			return;
+		}
+		
 		// Command line arguments parsing
 		serverIpAddress = args[0];
 
