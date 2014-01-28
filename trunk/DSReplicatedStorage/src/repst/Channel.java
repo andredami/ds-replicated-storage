@@ -45,9 +45,9 @@ public class Channel {
 
 		// open and initialize the ip multicast socket
 		// Which port should we listen to
-		int gPort = 5000;
+		int gPort = 2232;
 		// Which address
-		String groupAddr = "225.4.5.6";
+		String groupAddr = "239.0.0.1";
 		multicastSocket = new MulticastSocket(gPort);
 		multicastSocket.joinGroup(InetAddress.getByName(groupAddr));
 

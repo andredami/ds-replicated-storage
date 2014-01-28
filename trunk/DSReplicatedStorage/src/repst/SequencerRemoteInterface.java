@@ -10,7 +10,7 @@ public interface SequencerRemoteInterface extends Remote {
 	
 	public void forwardMessage(Message msg) throws RemoteException;
 	
-	public void recordHartbeat(Message msg) throws RemoteException;
+	public void recordHeartbeat(Message msg) throws RemoteException;
 	
 	public List<OrderedMessage> getLostMessages(Long afterSequence) throws RemoteException;
 
