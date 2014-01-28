@@ -29,8 +29,8 @@ import java.util.concurrent.Executors;
  * 
  */
 public class Sequencer extends UnicastRemoteObject implements SequencerRemoteInterface{
-	private static final int MULTICAST_GROUP_PORT = 5000;
-	private static final String IP_MULTICAST_GROUP = "225.4.5.6";
+	private static final int MULTICAST_GROUP_PORT = 2232;
+	private static final String IP_MULTICAST_GROUP = "239.0.0.1";
 	/**
 	 * 
 	 */
@@ -112,6 +112,7 @@ public class Sequencer extends UnicastRemoteObject implements SequencerRemoteInt
      	sequencer.buffer=new HistoryBuffer((int) (sequencer.nextId-1));
 	}
 	
+	@Override
 	public Long getNewProcessId() {
 		long assignedId;
 		synchronized(nextId){
@@ -121,6 +122,7 @@ public class Sequencer extends UnicastRemoteObject implements SequencerRemoteInt
 		return assignedId;
 	}
 
+	@Override
 	public synchronized void forwardMessage(Message msg) {
 		OrderedMessage ordMsg = new OrderedMessage(nextSequence, msg);
 		buffer.record(nextSequence, ordMsg);
@@ -162,11 +164,13 @@ public class Sequencer extends UnicastRemoteObject implements SequencerRemoteInt
 
 		}
 	}
-
-	public void recordHartbeat(Message msg) {
-		// TODO in history buffer update lastSequence
+	
+	@Override
+	public synchronized void recordHeartbeat(Message msg) {
+		buffer.record(msg.processId, msg.lastSequence);
 	}
 
+	@Override
 	public List<OrderedMessage> getLostMessages(Long afterSequence) {
 		return new ArrayList<OrderedMessage>(buffer.getAllLostMsgAfter(afterSequence));
 	}
