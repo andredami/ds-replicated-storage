@@ -114,7 +114,7 @@ public class Sequencer extends UnicastRemoteObject implements
 			assignedId = nextId;
 			nextId++;
 		}
-		System.out.println("New server has joined. ProcessId="+assignedId);
+		System.out.println("New server has joined. ProcessId=" + assignedId);
 		return assignedId;
 	}
 
@@ -164,14 +164,17 @@ public class Sequencer extends UnicastRemoteObject implements
 
 	@Override
 	public synchronized void recordHeartbeat(Message msg) {
-		buffer.record(msg.processId, msg.lastSequence);
-		System.out.println("Recorded Heartbeat from " + msg.processId
-				+ "(sequenceAck: " + msg.lastSequence + ")");
+		if (buffer != null) {
+			buffer.record(msg.processId, msg.lastSequence);
+			System.out.println("Recorded Heartbeat from " + msg.processId
+					+ "(sequenceAck: " + msg.lastSequence + ")");
+		}
 	}
 
 	@Override
 	public List<OrderedMessage> getLostMessages(Long afterSequence) {
-		System.out.println("Requested lost messaged starting from "+afterSequence);
+		System.out.println("Requested lost messaged starting from "
+				+ afterSequence);
 		return new ArrayList<OrderedMessage>(
 				buffer.getAllLostMsgAfter(afterSequence));
 	}

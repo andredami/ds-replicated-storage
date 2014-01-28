@@ -181,6 +181,7 @@ public class Channel {
 			@Override
 			public void run() {
 				try {
+					
 					sequencer.recordHeartbeat(new Message(null, processId, lastSequence));
 					System.out.println("HeartBeat sent.");
 				} catch (RemoteException e) {
@@ -191,7 +192,7 @@ public class Channel {
 	}
 
 	private void sendToSequencer(Message m) {
-		System.out.println("Forwarding message "+m.messageId+"to sequencer.");
+		System.out.println("Forwarding message "+m.messageId+" to sequencer.");
 		try {
 			sequencer.forwardMessage(m);
 		} catch (RemoteException e) {
