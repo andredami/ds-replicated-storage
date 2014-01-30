@@ -98,6 +98,7 @@ public class Sequencer extends UnicastRemoteObject implements
 					.println("Server should be operative, but i am unable to retrieve localhost information. ");
 		}
 
+		@SuppressWarnings("resource")
 		Scanner in = new Scanner(System.in);
 
 		System.out.println("Press newline to start:");

@@ -8,6 +8,10 @@ package repst;
  */
 public class OrderedMessage extends Message {
 	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -7492242387497344799L;
+	/**
 	 * The message sequence number
 	 */
 	public final long sequenceNumber;
