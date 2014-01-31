@@ -1,25 +1,13 @@
-/**
- * 
- */
 package repst;
 
 import java.io.Serializable;
 
-/**
- * Represents an immutable Member Message sent Point-To-Point to the {@link Sequencer}
- * 
- * @author Andrea
- * 
- */
-public class LamportMessage extends LMessage implements Serializable {
+public class LamportMessage extends LMessage {
 
-	public LamportMessage(Payload payload2, long processId, long assignedClock) {
+	public LamportMessage(Payload payload, int processId, long assignedClock) {
 		super(processId, assignedClock);
+		this.payload=payload;
 	}
-
-	public Serializable payload;
-
-	
-
+	Serializable payload;
 	
 }

@@ -3,6 +3,7 @@
  */
 package repst;
 
+import java.io.IOException;
 import java.io.Serializable;
 import java.util.LinkedList;
 import java.util.concurrent.ExecutorService;
@@ -15,7 +16,7 @@ import java.util.concurrent.Executors;
 public class LamportChannel {
 
 	private Long lamportClock = (long) 0;
-	private long processId = 0;
+	private int processId = 0;
 
 	private LinkedList<LamportMessage> deliveryQueue = new LinkedList<LamportMessage>();
 	private LinkedList<LamportMessage> orderingQueue = new LinkedList<LamportMessage>();
@@ -25,7 +26,7 @@ public class LamportChannel {
 	private UdpReliableChannel udpReliableChannel;
 	private int numberOfMember;
 
-	public void initialize(int processId, int numberOfmember) {
+	public void initialize(int processId, int numberOfmember) throws IOException {
 		this.processId = processId;
 		this.numberOfMember = numberOfmember;
 		this.udpReliableChannel = new UdpReliableChannel();
@@ -57,8 +58,9 @@ public class LamportChannel {
 				msgIndex = i;
 			}
 		}
-		Integer n = ackList.get(msgIndex);
+		Integer n = ackList.remove(msgIndex);
 		n++;
+		ackList.add(msgIndex, n);
 		if (n == numberOfMember && msgIndex == 0) {
 			putInDeliveryQueue(orderingQueue.get(msgIndex));
 			orderingQueue.remove(msgIndex);
@@ -69,6 +71,7 @@ public class LamportChannel {
 				putInDeliveryQueue(orderingQueue.get(i));
 				orderingQueue.remove(i);
 				ackList.remove(i);
+				i--;
 			}else{
 				break;
 			}
@@ -101,7 +104,12 @@ public class LamportChannel {
 		@Override
 		public void run() {
 			while (true) {
-				LamportMessage m = udpReliableChannel.read();
+				LamportMessage m = null;
+				try {
+					m = (LamportMessage) udpReliableChannel.read();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
 				onMulticastReceived(m);
 			}
 
@@ -141,14 +149,8 @@ public class LamportChannel {
 	}
 
 	/**
-	 * Asynchronous write operation: only performs the call to the sequencer.
-	 * Ensures that the same reference of payload is returned back when reading
-	 * from the channel: in this way the server is not aware of the group and we
-	 * do not have conflicts in tell apart my payload from the payload of
-	 * others.
 	 * 
-	 * @param payload
-	 */
+	 **/
 	public synchronized void write(final Payload payload) {
 		LamportMessage m;
 		synchronized (lamportClock) {

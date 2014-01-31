@@ -8,14 +8,16 @@ public class LMessage implements Serializable{
 		this.processId = processId;
 		this.lamportclock = lamportclock;
 	}
+	long lamportclock;
 	long processId;
+	
+	
 	public long getProcessId() {
 		return processId;
 	}
 	public void setProcessId(long processId) {
 		this.processId = processId;
 	}
-	long lamportclock;
 	
 	public long getLamportClock() {
 		return lamportclock;
