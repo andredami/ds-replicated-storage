@@ -64,7 +64,7 @@ public class UdpReliableChannel {
 		synchronized (lastClock) {
 			rMsg = new RMessageContent(m, procid, ++lastClock,
 					((VectorAck)vectorAck.clone()));
-			history.add(rMsg);
+			history.record(rMsg);
 		}
 		pool.execute(new Sender(rMsg));
 	}
