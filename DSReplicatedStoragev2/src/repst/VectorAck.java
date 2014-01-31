@@ -54,7 +54,7 @@ public class VectorAck implements Serializable{
 		}
 		return false;
 	}
-	public long getLastClockFrom(long procid) {
+	public long getLastClockOf(long procid) {
 		// TODO Auto-generated method stub
 		return 0;
 	}

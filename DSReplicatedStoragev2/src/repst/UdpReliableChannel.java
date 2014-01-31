@@ -38,13 +38,8 @@ public class UdpReliableChannel {
 		numOfMember = numberOfmember;
 		vectorAck = new VectorAck(numberOfmember, processId);
 		history = new HistoryBuffer(processId, numberOfmember);
-		// open and initialize the ip multicast socket
-		// Which port should we listen to
-		int gPort = MULTICAST_GROUP_PORT;
-		// Which address
-		String groupAddr = IP_MULTICAST_GROUP;
-		multicastSocket = new MulticastSocket(gPort);
-		multicastSocket.joinGroup(InetAddress.getByName(groupAddr));
+		multicastSocket = new MulticastSocket(MULTICAST_GROUP_PORT);
+		multicastSocket.joinGroup(InetAddress.getByName(IP_MULTICAST_GROUP));
 		pool.execute(readFromSocket);
 	}
 
@@ -56,14 +51,14 @@ public class UdpReliableChannel {
 			}
 			s = delivery.remove(0);
 		}
-		return s;	
+		return s;
 	}
 
 	public void write(Serializable m) {
 		RMessageContent rMsg;
 		synchronized (lastClock) {
 			rMsg = new RMessageContent(m, procid, ++lastClock,
-					((VectorAck)vectorAck.clone()));
+					((VectorAck) vectorAck.clone()));
 			history.record(rMsg);
 		}
 		pool.execute(new Sender(rMsg));
@@ -73,67 +68,53 @@ public class UdpReliableChannel {
 		if (msg instanceof RNack) {
 			elaborateNackReceived((RNack) msg);
 			return;
+		} else if (msg instanceof RMessageContent) {
+			elaborateContentMessage((RMessageContent) msg);
 		}
-		RMessageContent m=(RMessageContent) msg;
-		elaborateContentMessage( m);
-
 	}
 
-	private void elaborateContentMessage( RMessageContent m) {
+	private void elaborateContentMessage(RMessageContent m) {
 		int msgProcid = m.getProcessId();
 		long msgclock = m.getClock();
-		if(vectorAck.getLastClockFrom(msgProcid)<=m.getClock()){
-			return;//it is a duplicate
+		if (vectorAck.getLastClockOf(msgProcid) <= m.getClock()) {
+			return;// it is a duplicate
 		}
 		if (vectorAck.updateIfCorrect(msgProcid, msgclock)) {
 			putInDeliveryQueue(m);
+
 		} else {
 			putInHoldbackQueue(m);
+			checkIfNackIsToBeSent(m);
 		}
-		checkIfNackIsToBeSent(m);
 		checkAndUpdateHoldbackQueue(m);
 		checkAndUpdateHistory(m);
-		
-		
-	}
-
-	private void checkIfNackIsToBeSent(RMessageContent m) {
-		// TODO Auto-generated method stub
-		//the message can be in holdback if not ask for re-sending
-		
-	}
-
-	private void elaborateNackReceived(RNack msg) {
-		// TODO Auto-generated method stub
 
 	}
 
-	private void checkAndUpdateHistory(RMessageContent msg) {
-
-		VectorAck v = msg.getPiggyBackAcks();
-		int pid = v.getProcessId();
-		long lastSeen = v.getLastClockFrom(procid);
-		history.trimIfYouCan(pid, lastSeen);
-
-	}
-	
+	/*
+	 * Clear the holdback queue delivering the messages if possible. It is
+	 * called when a message is delivered. Mantains FIFO order.
+	 * 
+	 * @param msg
+	 */
 	private void checkAndUpdateHoldbackQueue(RMessage msg) {
 		int pid = msg.getProcessId();
-		long lastseenclock = msg.getClock();
-		if(vectorAck.getLastClockFrom(pid)<=msg.getClock()){
+		long lastDelivered = msg.getClock();
+		if (vectorAck.getLastClockOf(pid) <= msg.getClock()) {
 			return;
 		}
 		boolean found;
 		do {
-			found=false;
+			found = false;
 			for (int i = 0; i < holdback.size(); i++) {
-				if (pid == holdback.get(i).getProcessId()
-						&& lastseenclock == holdback.get(i).getClock() + 1) {
+				RMessageContent alreadyReceivedMsg = holdback.get(i);
+				if (pid == alreadyReceivedMsg.getProcessId()
+						&& lastDelivered + 1 == alreadyReceivedMsg.getClock()) {
 					found = true;
-					vectorAck.update(pid, lastseenclock);
-					putInDeliveryQueue(holdback.get(i));
+					vectorAck.update(pid, alreadyReceivedMsg.getClock());
+					putInDeliveryQueue(alreadyReceivedMsg);
 					holdback.remove(i);
-					lastseenclock++;
+					lastDelivered++;
 				}
 			}
 		} while (found);
@@ -144,10 +125,55 @@ public class UdpReliableChannel {
 		holdback.add(msg);
 	}
 
+	private void checkAndUpdateHistory(RMessageContent msg) {
+
+		VectorAck v = msg.getPiggyBackAcks();
+		int pid = v.getProcessId();
+		long lastSeen = v.getLastClockOf(procid);
+		history.trimIfYouCan(pid, lastSeen);
+
+	}
+
 	private void putInDeliveryQueue(RMessageContent msg) {
 		synchronized (delivery) {
 			delivery.add(msg.getPayLoad());
 			delivery.notifyAll();
+		}
+
+	}
+
+	/*
+	 * to be called after the hold-back queue is cleaned
+	 */
+	private void checkIfNackIsToBeSent(RMessageContent m) {
+		// the message can be in holdback if not ask for re-sending
+		int pid = m.getProcessId();
+		long lastReceived = m.getClock();
+		long lastDelivered = vectorAck.getLastClockOf(pid);
+		if (lastDelivered >= lastReceived) {
+			return;
+		}
+		synchronized (holdback) {
+			for (int i = 0; i < holdback.size(); i++) {
+				RMessageContent alreadyReceivedMsg = holdback.get(i);
+				if (pid == alreadyReceivedMsg.getProcessId()) {
+					//a message is blocked in the hold-back queue!
+					scheduleNackFor(pid, lastDelivered + 1);
+				}
+			}
+		}
+
+	}
+
+	private void scheduleNackFor(int pid, long l) {
+		// TODO Auto-generated method stub
+
+	}
+
+	private void elaborateNackReceived(RNack msg) {
+		if(msg.getProcessId()==procid){
+			RMessageContent m=history.get(msg.getClock());
+			pool.execute(new Sender(m));
 		}
 
 	}
