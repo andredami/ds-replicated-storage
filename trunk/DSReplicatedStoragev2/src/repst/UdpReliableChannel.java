@@ -104,31 +104,35 @@ public class UdpReliableChannel {
 			return;
 		}
 		boolean found;
-		do {
-			found = false;
-			for (int i = 0; i < holdback.size(); i++) {
-				RMessageContent alreadyReceivedMsg = holdback.get(i);
-				if (pid == alreadyReceivedMsg.getProcessId()
-						&& lastDelivered + 1 == alreadyReceivedMsg.getClock()) {
-					found = true;
-					vectorAck.update(pid, alreadyReceivedMsg.getClock());
-					putInDeliveryQueue(alreadyReceivedMsg);
-					holdback.remove(i);
-					lastDelivered++;
+		synchronized (holdback) {
+			do {
+				found = false;
+				for (int i = 0; i < holdback.size(); i++) {
+					RMessageContent alreadyReceivedMsg = holdback.get(i);
+					if (pid == alreadyReceivedMsg.getProcessId()
+							&& lastDelivered + 1 == alreadyReceivedMsg
+									.getClock()) {
+						found = true;
+						vectorAck.update(pid, alreadyReceivedMsg.getClock());
+						putInDeliveryQueue(alreadyReceivedMsg);
+						holdback.remove(i);
+						lastDelivered++;
+					}
 				}
-			}
-		} while (found);
-
+			} while (found);
+		}
 	}
 
 	private void putInHoldbackQueue(RMessageContent msg) {
-		holdback.add(msg);
+		synchronized (holdback) {
+			holdback.add(msg);
+		}
 	}
 
 	private void checkAndUpdateHistory(RMessageContent msg) {
 
 		VectorAck v = msg.getPiggyBackAcks();
-		int pid = v.getProcessId();
+		int pid = msg.getProcessId();
 		long lastSeen = v.getLastClockOf(procid);
 		history.trimIfYouCan(pid, lastSeen);
 
@@ -157,7 +161,7 @@ public class UdpReliableChannel {
 			for (int i = 0; i < holdback.size(); i++) {
 				RMessageContent alreadyReceivedMsg = holdback.get(i);
 				if (pid == alreadyReceivedMsg.getProcessId()) {
-					//a message is blocked in the hold-back queue!
+					// a message is blocked in the hold-back queue!
 					scheduleNackFor(pid, lastDelivered + 1);
 				}
 			}
@@ -165,15 +169,20 @@ public class UdpReliableChannel {
 
 	}
 
-	private void scheduleNackFor(int pid, long l) {
+	private void scheduleNackFor(int pid, long clock) {
 		// TODO Auto-generated method stub
+		RNack m = new RNack(procid, pid, clock);
+		pool.execute(new Sender(m));
 
 	}
 
 	private void elaborateNackReceived(RNack msg) {
-		if(msg.getProcessId()==procid){
-			RMessageContent m=history.get(msg.getClock());
+		if (msg.getProcessId() == procid) {
+			RMessageContent m = history.get(msg.getClock());
 			pool.execute(new Sender(m));
+		} else {
+			// TODO suppress the scheduled nack if it is the case
+			// depend on scheduleNack method
 		}
 
 	}
@@ -203,7 +212,7 @@ public class UdpReliableChannel {
 		}
 	};
 
-	public class Sender implements Runnable {
+	private class Sender implements Runnable {
 
 		RMessage msg;
 
