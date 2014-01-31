@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 
 public class VectorAck implements Serializable{
+	
 	int[] ids;
 	long[] clocks;
 	
@@ -21,14 +22,8 @@ public class VectorAck implements Serializable{
 	}
 	private VectorAck(){}
 	
-	public void update(int id,long clock){
-		int index=-1;
-		for (int i=0;i<ids.length;i++){
-			if(ids[i]==id){
-				index=i;
-				break;
-			}
-		}
+	public synchronized void update(int id,long clock){
+		int index=getIndexOf(id);
 		clocks[index]=clock;		
 	}
 	
@@ -41,26 +36,29 @@ public class VectorAck implements Serializable{
 		
 		return cloned;
 	}
-	public boolean updateIfCorrect(int msgProcid, long msgclock) {
-		int index;
-		for( index = 0;index<ids.length;index++ ){
-			if(msgProcid==ids[index]){
-				break;
-			}
-		}
+	public synchronized boolean updateIfCorrect(int msgProcid, long msgclock) {
+		int index = getIndexOf(msgProcid);
 		if(clocks[index]+1==msgclock){
 			clocks[index]=msgclock;
 			return true;
 		}
 		return false;
 	}
-	public long getLastClockOf(long procid) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
-	public int getProcessId() {
-		// TODO Auto-generated method stub
-		return 0;
+	
+	private int getIndexOf(int msgProcid) {
+		int index;
+		for( index = 0;index<ids.length;index++ ){
+			if(msgProcid==ids[index]){
+				break;
+			}
+		}
+		return index;
 	}
 	
+	public synchronized long getLastClockOf(int procid) {
+		int index=getIndexOf(procid);
+		
+		return clocks[index];
+	}
+		
 }
