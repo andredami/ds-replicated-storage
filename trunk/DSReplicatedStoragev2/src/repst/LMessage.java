@@ -3,6 +3,12 @@ package repst;
 import java.io.Serializable;
 
 public class LMessage implements Serializable{
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -6551761422395005658L;
+
+
 	public LMessage(long processId, long lamportclock) {
 		super();
 		this.processId = processId;
