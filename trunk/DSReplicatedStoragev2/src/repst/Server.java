@@ -35,7 +35,6 @@ public class Server extends UnicastRemoteObject implements
 
 	private StorageMap storage = new StorageMap();
 	private LamportChannel channel = new LamportChannel();
-	private List<Payload> operations = new LinkedList<Payload>();
 	private ExecutorService pool = Executors.newCachedThreadPool();
 
 	// TODO main - createChannel calls initialize
@@ -130,17 +129,7 @@ public class Server extends UnicastRemoteObject implements
 	public synchronized void writeValue(Integer key, Integer value) {
 		System.out.println("Write request received: key="+key+" value="+value);
 		Payload p = new Payload(key, value);
-		synchronized (operations) {
-			operations.add(operations.size(), p);
-		}
-		try {
-			synchronized (p) {
-				channel.write(p);// asynch call
-				p.wait();	
-			}
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
+		channel.write(p);// asynch call
 		return;
 
 	}
@@ -169,27 +158,8 @@ public class Server extends UnicastRemoteObject implements
 	 *            the paylod delivered by channel.
 	 */
 	private void performAndNotifyWriteOp(Payload pNew) {
-		Payload pOld = null;
-		boolean my = false;
-		synchronized (operations) {
-			Iterator<Payload> i = operations.iterator();
-			while (i.hasNext()) {
-				pOld = i.next();
-				if (pOld == pNew) {
-					i.remove();
-					my = true;
-					break;
-				}
-			}
-		} // release lock on operations
-
 		// this write is performed in a single thread: no worries about ordering
 		storage.putValue(pNew.key, pNew.value);
-		if (pOld != null && my == true) {
-			synchronized (pOld) {
-				pOld.notify();
-			}
-		}
 	}
 
 }
