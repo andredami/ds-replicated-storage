@@ -242,10 +242,10 @@ public class UdpReliableChannel {
 				InetAddress address = InetAddress.getByName(IP_MULTICAST_GROUP);
 				DatagramPacket packet = new DatagramPacket(sendBuf,
 						sendBuf.length, address, MULTICAST_GROUP_PORT);
-				synchronized (multicastSocket) {
-					System.out.println("R: sending:"+msg.getClass()+msg.procid+"."+msg.clock);
-					multicastSocket.send(packet);
-				}
+				
+				System.out.println("R: sending:"+msg.getClass()+msg.procid+"."+msg.clock);
+				multicastSocket.send(packet);
+				
 				os.close();
 
 			} catch (IOException e) {
