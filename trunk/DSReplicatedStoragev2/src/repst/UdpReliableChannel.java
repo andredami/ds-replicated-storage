@@ -12,6 +12,8 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -30,9 +32,10 @@ public class UdpReliableChannel {
 
 	private MulticastSocket multicastSocket;
 	private ExecutorService pool = Executors.newCachedThreadPool();
+	private Timer timer=new Timer(true);
 	private Long lastClock=0L;
 
-	public void initialize(int processId, int numberOfmember)
+	public void initialize( int processId, int numberOfmember)
 			throws IOException {
 		procid = processId;
 		numOfMember = numberOfmember;
@@ -41,6 +44,18 @@ public class UdpReliableChannel {
 		multicastSocket = new MulticastSocket(MULTICAST_GROUP_PORT);
 		multicastSocket.joinGroup(InetAddress.getByName(IP_MULTICAST_GROUP));
 		pool.execute(readFromSocket);
+		timer.scheduleAtFixedRate(new TimerTask() {
+			
+			@Override
+			public void run() {
+				for(int i=0;i<numOfMember;i++){
+					if(i!=procid){
+						checkIfNackIsToBeSent(i);
+					}
+				}
+				
+			}
+		}, 0, 60*1000);
 	}
 
 	public Serializable read() throws InterruptedException {
@@ -87,7 +102,7 @@ public class UdpReliableChannel {
 		} else {
 			putInHoldbackQueue(m);		
 		}
-		checkIfNackIsToBeSent(m);
+		checkIfNackIsToBeSent(m.getProcessId());
 		checkAndUpdateHistory(m);
 
 	}
@@ -150,10 +165,8 @@ public class UdpReliableChannel {
 	/*
 	 * to be called after the hold-back queue is cleaned
 	 */
-	private void checkIfNackIsToBeSent(RMessageContent m) {
+	private void checkIfNackIsToBeSent(int pid) {
 		// the message can be in holdback if not ask for re-sending
-		int pid = m.getProcessId();
-		long lastReceived = m.getClock();
 		long lastDelivered = vectorAck.getLastClockOf(pid);
 		synchronized (holdback) {
 			long clocktoaskfor=lastDelivered+1;
