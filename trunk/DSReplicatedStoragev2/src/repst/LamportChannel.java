@@ -72,6 +72,7 @@ public class LamportChannel {
 	private synchronized void insertInOrderingQueue(LamportMessage newMsg,int index) {
 		System.out.println("L:Inserting msg:"+newMsg.lamportclock+"."+newMsg.processId+" at "+index);
 		orderingQueue.add(index, newMsg);
+		ackList.add(index, 0);
 		// add the implicit ack of the sender
 		LamportAck fake_ack = new LamportAck(newMsg.getProcessId(),
 				newMsg.getLamportClock());
@@ -90,13 +91,11 @@ public class LamportChannel {
 				break;
 			}
 		}
-		if(ackList.size()!=orderingQueue.size()){//this is the first ack
-			ackList.add(msgIndex, 1);
-		}else{
-			Integer n = ackList.remove(msgIndex);
-			n++;
-			ackList.add(msgIndex, n);
-		}
+		
+		Integer n = ackList.remove(msgIndex);
+		n++;
+		ackList.add(msgIndex, n);
+		
 		if (msgIndex != 0) {
 			return;
 		}
