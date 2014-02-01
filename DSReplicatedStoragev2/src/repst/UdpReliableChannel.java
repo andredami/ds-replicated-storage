@@ -83,12 +83,11 @@ public class UdpReliableChannel {
 		}
 		if (vectorAck.updateIfCorrect(msgProcid, msgclock)) {
 			putInDeliveryQueue(m);
-
+			checkAndUpdateHoldbackQueue(m);
 		} else {
-			putInHoldbackQueue(m);
-			checkIfNackIsToBeSent(m);
+			putInHoldbackQueue(m);		
 		}
-		checkAndUpdateHoldbackQueue(m);
+		checkIfNackIsToBeSent(m);
 		checkAndUpdateHistory(m);
 
 	}
@@ -101,10 +100,7 @@ public class UdpReliableChannel {
 	 */
 	private void checkAndUpdateHoldbackQueue(RMessage msg) {
 		int pid = msg.getProcessId();
-		long lastDelivered = msg.getClock();
-		if (vectorAck.getLastClockOf(pid) <= msg.getClock()) {
-			return;
-		}
+		long lastDelivered = vectorAck.getLastClockOf(pid);
 		boolean found;
 		synchronized (holdback) {
 			do {
@@ -118,6 +114,7 @@ public class UdpReliableChannel {
 						vectorAck.update(pid, alreadyReceivedMsg.getClock());
 						putInDeliveryQueue(alreadyReceivedMsg);
 						holdback.remove(i);
+						i--;
 						lastDelivered++;
 					}
 				}
@@ -162,11 +159,13 @@ public class UdpReliableChannel {
 			return;
 		}
 		synchronized (holdback) {
+			long clocktoaskfor=lastDelivered+1;
 			for (int i = 0; i < holdback.size(); i++) {
 				RMessageContent alreadyReceivedMsg = holdback.get(i);
 				if (pid == alreadyReceivedMsg.getProcessId()) {
 					// a message is blocked in the hold-back queue!
-					scheduleNackFor(pid, lastDelivered + 1);
+					scheduleNackFor(pid, clocktoaskfor);
+					break;
 				}
 			}
 		}
@@ -184,6 +183,7 @@ public class UdpReliableChannel {
 		System.out.println("R: received: "+msg);
 		if (msg.getProcessId() == procid) {
 			RMessageContent m = history.get(msg.getClock());
+			m.setPiggyBackAcks((VectorAck) vectorAck.clone());
 			pool.execute(new Sender(m));
 		} else {
 			// TODO suppress the scheduled nack if it is the case

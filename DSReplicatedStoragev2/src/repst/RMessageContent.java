@@ -29,4 +29,9 @@ public class RMessageContent extends RMessage {
 		return v;
 	}
 
+	public void setPiggyBackAcks(VectorAck clone) {
+		v=clone;
+		
+	}
+
 }
