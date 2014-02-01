@@ -127,7 +127,7 @@ public class UdpReliableChannel {
 
 	private void putInHoldbackQueue(RMessageContent msg) {
 		synchronized (holdback) {
-			System.out.println("R: in hold-back:"+msg.procid+"."+msg.clock);
+			System.out.println("R: in hold-back:"+msg);
 			holdback.add(msg);
 		}
 	}
@@ -143,7 +143,7 @@ public class UdpReliableChannel {
 
 	private void putInDeliveryQueue(RMessageContent msg) {	
 		synchronized (delivery) {
-			System.out.println("R: delivering:"+msg.procid+"."+msg.clock);
+			System.out.println("R: delivering:"+msg);
 			delivery.add(msg.getPayLoad());
 			delivery.notifyAll();
 		}
@@ -181,7 +181,7 @@ public class UdpReliableChannel {
 	}
 
 	private void elaborateNackReceived(RNack msg) {
-		System.out.println("R: nack received for:"+msg.procid+"."+msg.clock);
+		System.out.println("R: received: "+msg);
 		if (msg.getProcessId() == procid) {
 			RMessageContent m = history.get(msg.getClock());
 			pool.execute(new Sender(m));
@@ -243,7 +243,7 @@ public class UdpReliableChannel {
 				DatagramPacket packet = new DatagramPacket(sendBuf,
 						sendBuf.length, address, MULTICAST_GROUP_PORT);
 				
-				System.out.println("R: sending:"+msg.getClass()+msg.procid+"."+msg.clock);
+				System.out.println("R: sending:"+msg);
 				multicastSocket.send(packet);
 				
 				os.close();
