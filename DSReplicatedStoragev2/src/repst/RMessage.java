@@ -25,6 +25,9 @@ public class RMessage implements Serializable {
 	}
 
 	
-	
+	@Override
+	public String toString() {
+		return "rMsg: "+clock+"."+procid;
+	}
 
 }

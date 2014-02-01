@@ -11,5 +11,11 @@ public class RNack extends RMessage {
 	public RNack(int frompid,int procid, long clock) {
 		super(procid, clock);
 	}
+	
+	@Override
+	public String toString() {
+		// TODO Auto-generated method stub
+		return "Rnack for:"+super.toString();
+	}
 
 }
