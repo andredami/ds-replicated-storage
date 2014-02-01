@@ -52,6 +52,7 @@ public class LamportChannel {
 		if (orderingQueue.isEmpty()) {
 			insertInOrderingQueue(newMsg,0);
 		} else {
+			boolean inserted=false;
 			for (int i = 0; i < orderingQueue.size(); i++) {
 				LamportMessage lMsginQ = orderingQueue.get(i);
 				if (lMsginQ.getLamportClock() > newMsg.getLamportClock()
@@ -59,8 +60,12 @@ public class LamportChannel {
 								.getLamportClock() && lMsginQ.getProcessId() > newMsg
 								.getProcessId())) {
 					insertInOrderingQueue(newMsg,i);
+					inserted=true;
 					break;
 				}
+			}
+			if(!inserted){
+				insertInOrderingQueue(newMsg, orderingQueue.size());
 			}
 		}
 		if (newMsg.getProcessId() != processId) {
