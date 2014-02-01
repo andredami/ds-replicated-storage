@@ -155,9 +155,6 @@ public class UdpReliableChannel {
 		int pid = m.getProcessId();
 		long lastReceived = m.getClock();
 		long lastDelivered = vectorAck.getLastClockOf(pid);
-		if (lastDelivered >= lastReceived) {
-			return;
-		}
 		synchronized (holdback) {
 			long clocktoaskfor=lastDelivered+1;
 			for (int i = 0; i < holdback.size(); i++) {
