@@ -69,7 +69,8 @@ public class LamportChannel {
 
 	}
 
-	private void insertInOrderingQueue(LamportMessage newMsg,int index) {
+	private synchronized void insertInOrderingQueue(LamportMessage newMsg,int index) {
+		System.out.println("L:Inserting msg:"+newMsg.lamportclock+"."+newMsg.processId+" at "+index);
 		orderingQueue.add(index, newMsg);
 		// add the implicit ack of the sender
 		LamportAck fake_ack = new LamportAck(newMsg.getProcessId(),
@@ -78,6 +79,7 @@ public class LamportChannel {
 	}
 
 	private synchronized void updateReceivedAck(LamportAck m) {
+		System.out.println("L: Received ack for:"+m.lamportclock+"."+m.processId);
 		long procid = m.getProcessId();
 		long clock = m.getLamportClock();
 		int msgIndex = -1;
@@ -111,7 +113,7 @@ public class LamportChannel {
 
 	}
 
-	private void sendAck(LamportMessage m) {
+	private synchronized void sendAck(LamportMessage m) {
 		LamportAck ack = new LamportAck(m.getProcessId(), m.getLamportClock());
 		updateReceivedAck(ack);
 		udpReliableChannel.write(ack);
@@ -141,7 +143,9 @@ public class LamportChannel {
 	 * @param msg
 	 */
 	private void putInDeliveryQueue(LamportMessage msg) {
+		
 		synchronized (deliveryQueue) {
+			System.out.println("L: Delivering message:"+msg.lamportclock+"."+msg.processId);
 			deliveryQueue.addLast(msg);
 			deliveryQueue.notifyAll();
 		}
