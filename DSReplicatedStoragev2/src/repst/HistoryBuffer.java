@@ -20,11 +20,11 @@ public class HistoryBuffer {
 	}
 
 	
-	public RMessageContent get(long clock){
+	public synchronized RMessageContent get(long clock){
 		return buffer.get(new Long(clock));
 	}
 
-	public void trimIfYouCan(int pid, long lastSeen) {
+	public synchronized void trimIfYouCan(int pid, long lastSeen) {
 		record(pid, lastSeen);
 		
 	}
@@ -64,7 +64,7 @@ public class HistoryBuffer {
 	 * @param msg
 	 *            the {@link Message} to be recorded
 	 */
-	public void record( RMessageContent msg) {
+	public synchronized void record( RMessageContent msg) {
 		// Policy, if a sequence number is already associated to a message,
 		// ignore all other messages registering with that sequence number
 		if (!buffer.containsKey(msg.getClock())) {
@@ -126,7 +126,7 @@ public class HistoryBuffer {
 	 * @param lastSequence
 	 *            the sequence number of the {@link Message} to be recorded
 	 */
-	public void record(long process, long lastSequence) {
+	public synchronized void record(long process, long lastSequence) {
 		if (!lastAckVect.containsKey(process)
 				|| lastAckVect.get(process) < lastSequence) {
 			lastAckVect.put(process, lastSequence);
