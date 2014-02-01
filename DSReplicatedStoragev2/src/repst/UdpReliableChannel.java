@@ -76,7 +76,7 @@ public class UdpReliableChannel {
 	private void elaborateContentMessage(RMessageContent m) {
 		int msgProcid = m.getProcessId();
 		long msgclock = m.getClock();
-		if (vectorAck.getLastClockOf(msgProcid) <= m.getClock()) {
+		if (vectorAck.getLastClockOf(msgProcid) >= m.getClock()) {
 			return;// it is a duplicate
 		}
 		if (vectorAck.updateIfCorrect(msgProcid, msgclock)) {

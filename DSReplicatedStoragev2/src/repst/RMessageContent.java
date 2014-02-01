@@ -14,6 +14,8 @@ public class RMessageContent extends RMessage {
 	public RMessageContent(Serializable m, int procid, long clock,
 			VectorAck clone) {
 		super(procid, clock);
+		payload=m;
+		v=clone;
 
 	}
 
