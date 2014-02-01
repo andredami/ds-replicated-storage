@@ -5,20 +5,19 @@ import java.util.ArrayList;
 
 public class VectorAck implements Serializable{
 	
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
 	int[] ids;
 	long[] clocks;
 	
 	public VectorAck(int numberOfMember,long yourID) {
-		ids=new int[numberOfMember-1];
-		for (int i =0,m=0;i<numberOfMember-1;i++,m++){
-			if(i!=yourID){
+		ids=new int[numberOfMember];
+		for (int i =0,m=0;i<numberOfMember;i++,m++){	
 				ids[i]=m;
-			}else{
-				m++;
-				ids[i]=m;		
-			}
 		}
-		clocks=new long[numberOfMember-1];
+		clocks=new long[numberOfMember];
 	}
 	private VectorAck(){}
 	
@@ -46,10 +45,12 @@ public class VectorAck implements Serializable{
 	}
 	
 	private int getIndexOf(int msgProcid) {
-		int index;
-		for( index = 0;index<ids.length;index++ ){
+		int index=0;
+		while(index<ids.length ){
 			if(msgProcid==ids[index]){
 				break;
+			}else{
+				index++;
 			}
 		}
 		return index;
