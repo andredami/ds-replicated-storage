@@ -30,7 +30,7 @@ public class UdpReliableChannel {
 
 	private MulticastSocket multicastSocket;
 	private ExecutorService pool = Executors.newCachedThreadPool();
-	private Long lastClock;
+	private Long lastClock=0L;
 
 	public void initialize(int processId, int numberOfmember)
 			throws IOException {
