@@ -57,7 +57,9 @@ public class UdpReliableChannel {
 	public void write(Serializable m) {
 		RMessageContent rMsg;
 		synchronized (lastClock) {
-			rMsg = new RMessageContent(m, procid, ++lastClock,
+			++lastClock;
+			vectorAck.update(procid, lastClock);
+			rMsg = new RMessageContent(m, procid, lastClock,
 					((VectorAck) vectorAck.clone()));
 			history.record(rMsg);
 		}
@@ -76,8 +78,8 @@ public class UdpReliableChannel {
 	private void elaborateContentMessage(RMessageContent m) {
 		int msgProcid = m.getProcessId();
 		long msgclock = m.getClock();
-		if (vectorAck.getLastClockOf(msgProcid) >= m.getClock()) {
-			return;// it is a duplicate
+		if (msgProcid==procid||vectorAck.getLastClockOf(msgProcid) >= m.getClock()) {
+			return;// it is a duplicate or it is one of mine
 		}
 		if (vectorAck.updateIfCorrect(msgProcid, msgclock)) {
 			putInDeliveryQueue(m);

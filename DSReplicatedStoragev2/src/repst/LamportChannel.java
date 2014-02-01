@@ -25,9 +25,9 @@ public class LamportChannel {
 
 	private ExecutorService pool = Executors.newCachedThreadPool();
 	private UdpReliableChannel udpReliableChannel;
-	
 
-	public void initialize(int processId, int numberOfmember) throws IOException {
+	public void initialize(int processId, int numberOfmember)
+			throws IOException {
 		this.processId = processId;
 		this.numberOfMember = numberOfmember;
 		this.udpReliableChannel = new UdpReliableChannel();
@@ -39,30 +39,44 @@ public class LamportChannel {
 		if (m instanceof LamportMessage) {
 			long lamportMsg = ((LamportMessage) m).getLamportClock();
 			synchronized (lamportClock) {
-					lamportClock = lamportClock<=lamportMsg?lamportMsg + 1:lamportClock+1;
+				lamportClock = lamportClock <= lamportMsg ? lamportMsg + 1
+						: lamportClock + 1;
 			}
 			putInOrderingQueue((LamportMessage) m);
 		} else if (m instanceof LamportAck) {
 			updateReceivedAck((LamportAck) m);
 		}
 	}
-	
+
 	private synchronized void putInOrderingQueue(LamportMessage newMsg) {
-		for(int i=0;i<orderingQueue.size();i++){
-			LamportMessage lMsginQ = orderingQueue.get(i);
-			if(lMsginQ.getLamportClock()>newMsg.getLamportClock()
-					||(lMsginQ.getLamportClock()==newMsg.getLamportClock()
-					&&lMsginQ.getProcessId()>newMsg.getProcessId())){
-				orderingQueue.add(i, newMsg);
-				ackList.add(i, 1);//one is my own ack
-				break;
+		if (orderingQueue.isEmpty()) {
+			insertInOrderingQueue(newMsg,0);
+		} else {
+			for (int i = 0; i < orderingQueue.size(); i++) {
+				LamportMessage lMsginQ = orderingQueue.get(i);
+				if (lMsginQ.getLamportClock() > newMsg.getLamportClock()
+						|| (lMsginQ.getLamportClock() == newMsg
+								.getLamportClock() && lMsginQ.getProcessId() > newMsg
+								.getProcessId())) {
+					insertInOrderingQueue(newMsg,i);
+					break;
+				}
 			}
 		}
-		if(newMsg.getProcessId()!=processId){
+		if (newMsg.getProcessId() != processId) {
 			sendAck(newMsg);
 		}
 
 	}
+
+	private void insertInOrderingQueue(LamportMessage newMsg,int index) {
+		orderingQueue.add(index, newMsg);
+		// add the implicit ack of the sender
+		LamportAck fake_ack = new LamportAck(newMsg.getProcessId(),
+				newMsg.getLamportClock());
+		updateReceivedAck(fake_ack);
+	}
+
 	private synchronized void updateReceivedAck(LamportAck m) {
 		long procid = m.getProcessId();
 		long clock = m.getLamportClock();
@@ -74,10 +88,14 @@ public class LamportChannel {
 				break;
 			}
 		}
-		Integer n = ackList.remove(msgIndex);
-		n++;
-		ackList.add(msgIndex, n);
-		if ( msgIndex != 0) {
+		if(ackList.size()!=orderingQueue.size()){//this is the first ack
+			ackList.add(msgIndex, 1);
+		}else{
+			Integer n = ackList.remove(msgIndex);
+			n++;
+			ackList.add(msgIndex, n);
+		}
+		if (msgIndex != 0) {
 			return;
 		}
 		for (int i = 0; i < orderingQueue.size(); i++) {
@@ -86,17 +104,16 @@ public class LamportChannel {
 				orderingQueue.remove(i);
 				ackList.remove(i);
 				i--;
-			}else{
+			} else {
 				break;
 			}
 		}
 
 	}
 
-	
-
 	private void sendAck(LamportMessage m) {
-		LamportAck ack=new LamportAck(m.getProcessId(),m.getLamportClock());
+		LamportAck ack = new LamportAck(m.getProcessId(), m.getLamportClock());
+		updateReceivedAck(ack);
 		udpReliableChannel.write(ack);
 	}
 
@@ -119,7 +136,7 @@ public class LamportChannel {
 
 	/**
 	 * Performed in single thread readFromSocket. insert at the end of the
-	 * delivery queue. 
+	 * delivery queue.
 	 * 
 	 * @param msg
 	 */
@@ -158,7 +175,7 @@ public class LamportChannel {
 			assignedClock = ++lamportClock;
 			m = new LamportMessage(payload, processId, assignedClock);
 		}
-		putInDeliveryQueue(m);
+		putInOrderingQueue(m);
 		udpReliableChannel.write(m);
 
 	}
