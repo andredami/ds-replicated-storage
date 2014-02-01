@@ -55,7 +55,7 @@ public class UdpReliableChannel {
 				}
 				
 			}
-		}, 0, 60*1000);
+		}, 0,2*1000);
 	}
 
 	public Serializable read() throws InterruptedException {
