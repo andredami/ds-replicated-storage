@@ -124,9 +124,9 @@ public class LamportChannel {
 		@Override
 		public void run() {
 			while (true) {
-				LamportMessage m = null;
+				LMessage m = null;
 				try {
-					m = (LamportMessage) udpReliableChannel.read();
+					m = (LMessage) udpReliableChannel.read();
 				} catch (InterruptedException e) {
 					e.printStackTrace();
 				}
