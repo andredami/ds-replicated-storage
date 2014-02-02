@@ -223,9 +223,7 @@ public class UdpReliableChannel {
 								new Sender(m),
 								delay,
 								TimeUnit.MILLISECONDS));
-		System.out.println("Scheduled NACK for message "+clock+":"+pid+" after " + (delay/1000) + " seconds");
-		} else {
-			System.out.println("NACK for message "+clock+":"+pid+" already scheduled");
+		System.out.println("R: Scheduled NACK for message "+clock+"."+pid+" after " + (delay/1000) + " seconds");
 		}
 		// pool.execute(new Sender(m));
 	}
@@ -249,7 +247,7 @@ public class UdpReliableChannel {
 				} else if (entry.getKey().hashCode() == ((RMessage) msg)
 						.hashCode()) {
 					entry.getValue().cancel(false);
-					System.out.println("Suppressing NACK for message "+msg.getClock()+":"+msg.getProcessId());
+					System.out.println("R: Suppressing NACK for message "+msg.getClock()+"."+msg.getProcessId());
 					i.remove();
 				}
 			}
