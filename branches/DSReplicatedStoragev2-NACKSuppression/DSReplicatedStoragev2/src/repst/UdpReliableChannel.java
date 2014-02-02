@@ -216,6 +216,7 @@ public class UdpReliableChannel {
 		 */
 		long delay = NACK_SUPPRESSION_DELAY_MIN
 				+ (int) (Math.random() * ((NACK_SUPPRESSION_DELAY_MAX - NACK_SUPPRESSION_DELAY_MIN) + 1));
+		if(!schedNacks.containsKey(m)){
 		schedNacks
 				.put(m,
 						nackPool.schedule(
@@ -223,6 +224,9 @@ public class UdpReliableChannel {
 								delay,
 								TimeUnit.MILLISECONDS));
 		System.out.println("Scheduled NACK for message "+clock+":"+pid+" after " + (delay/1000) + " seconds");
+		} else {
+			System.out.println("NACK for message "+clock+":"+pid+" already scheduled");
+		}
 		// pool.execute(new Sender(m));
 	}
 
