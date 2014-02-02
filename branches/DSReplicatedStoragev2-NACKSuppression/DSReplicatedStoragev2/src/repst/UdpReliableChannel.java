@@ -12,10 +12,17 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 public class UdpReliableChannel {
 
@@ -27,19 +34,31 @@ public class UdpReliableChannel {
 
 	VectorAck vectorAck;
 	HistoryBuffer history;
-	
-	//in order, contains  the message to be delivered to the upper layer
+
+	// in order, contains the message to be delivered to the upper layer
 	ArrayList<Serializable> delivery = new ArrayList<Serializable>();
-	
-	//not in order, contains the massages received out of sequence 
+
+	// not in order, contains the massages received out of sequence
 	ArrayList<RMessageContent> holdback = new ArrayList<RMessageContent>();
 
 	private MulticastSocket multicastSocket;
 	private ExecutorService pool = Executors.newCachedThreadPool();
-	private Timer timer=new Timer(true);
-	private Long lastClock=0L;
 
-	public void initialize( int processId, int numberOfmember)
+	/**
+	 * NACK-SUPRESSION EXTENSION: This pool allows the channel to schedule a
+	 * future send of a NACK message and to suppress it in case of another
+	 * channel signaling for the same NACK
+	 */
+	private ScheduledExecutorService nackPool = Executors
+			.newScheduledThreadPool(numOfMember);
+	private Map<RMessage, ScheduledFuture<?>> schedNacks = new HashMap<RMessage, ScheduledFuture<?>>();
+	private long NACK_SUPPRESSION_DELAY_MAX = 20;
+	private long NACK_SUPPRESSION_DELAY_MIN = 10;
+
+	private Timer timer = new Timer(true);
+	private Long lastClock = 0L;
+
+	public void initialize(int processId, int numberOfmember)
 			throws IOException {
 		procid = processId;
 		numOfMember = numberOfmember;
@@ -49,17 +68,17 @@ public class UdpReliableChannel {
 		multicastSocket.joinGroup(InetAddress.getByName(IP_MULTICAST_GROUP));
 		pool.execute(readFromSocket);
 		timer.scheduleAtFixedRate(new TimerTask() {
-			
+
 			@Override
 			public void run() {
-				for(int i=0;i<numOfMember;i++){
-					if(i!=procid){
+				for (int i = 0; i < numOfMember; i++) {
+					if (i != procid) {
 						checkIfNackIsToBeSent(i);
 					}
 				}
-				
+
 			}
-		}, 0,2*1000);
+		}, 0, 2 * 1000);
 	}
 
 	public Serializable read() throws InterruptedException {
@@ -97,14 +116,15 @@ public class UdpReliableChannel {
 	private void elaborateContentMessage(RMessageContent m) {
 		int msgProcid = m.getProcessId();
 		long msgclock = m.getClock();
-		if (msgProcid==procid||vectorAck.getLastClockOf(msgProcid) >= m.getClock()) {
+		if (msgProcid == procid
+				|| vectorAck.getLastClockOf(msgProcid) >= m.getClock()) {
 			return;// it is a duplicate or it is one of mine
 		}
 		if (vectorAck.updateIfCorrect(msgProcid, msgclock)) {
 			putInDeliveryQueue(m);
 			checkAndUpdateHoldbackQueue(m);
 		} else {
-			putInHoldbackQueue(m);		
+			putInHoldbackQueue(m);
 		}
 		checkIfNackIsToBeSent(m.getProcessId());
 		checkAndUpdateHistory(m);
@@ -143,8 +163,8 @@ public class UdpReliableChannel {
 
 	private void putInHoldbackQueue(RMessageContent msg) {
 		synchronized (holdback) {
-			if (!holdback.contains(msg)){//based on equals in Rmessage
-				System.out.println("R: in hold-back:"+msg);
+			if (!holdback.contains(msg)) {// based on equals in Rmessage
+				System.out.println("R: in hold-back:" + msg);
 				holdback.add(msg);
 			}
 		}
@@ -159,9 +179,9 @@ public class UdpReliableChannel {
 
 	}
 
-	private void putInDeliveryQueue(RMessageContent msg) {	
+	private void putInDeliveryQueue(RMessageContent msg) {
 		synchronized (delivery) {
-			System.out.println("R: delivering:"+msg);
+			System.out.println("R: delivering:" + msg);
 			delivery.add(msg.getPayLoad());
 			delivery.notifyAll();
 		}
@@ -175,7 +195,7 @@ public class UdpReliableChannel {
 		// the message can be in holdback if not ask for re-sending
 		long lastDelivered = vectorAck.getLastClockOf(pid);
 		synchronized (holdback) {
-			long clocktoaskfor=lastDelivered+1;
+			long clocktoaskfor = lastDelivered + 1;
 			for (int i = 0; i < holdback.size(); i++) {
 				RMessageContent alreadyReceivedMsg = holdback.get(i);
 				if (pid == alreadyReceivedMsg.getProcessId()) {
@@ -188,22 +208,44 @@ public class UdpReliableChannel {
 
 	}
 
-	private void scheduleNackFor(int pid, long clock) {
+	private synchronized void scheduleNackFor(int pid, long clock) {
 		// TODO Auto-generated method stub
 		RNack m = new RNack(procid, pid, clock);
-		pool.execute(new Sender(m));
-
+		/**
+		 * NACK-SUPRESSION EXTENSION
+		 */
+		schedNacks
+				.put(m,
+						nackPool.schedule(
+								new Sender(m),
+								NACK_SUPPRESSION_DELAY_MIN
+										+ (int) (Math.random() * ((NACK_SUPPRESSION_DELAY_MAX - NACK_SUPPRESSION_DELAY_MIN) + 1)),
+								TimeUnit.MILLISECONDS));
+		// pool.execute(new Sender(m));
 	}
 
-	private void elaborateNackReceived(RNack msg) {
-		System.out.println("R: received: "+msg);
+	private synchronized void elaborateNackReceived(RNack msg) {
+		System.out.println("R: received: " + msg);
 		if (msg.getProcessId() == procid) {
 			RMessageContent m = history.get(msg.getClock());
 			m.setPiggyBackAcks((VectorAck) vectorAck.clone());
 			pool.execute(new Sender(m));
 		} else {
-			// TODO suppress the scheduled nack if it is the case
-			// depend on scheduleNack method
+			/**
+			 * NACK-SUPRESSION EXTENSION
+			 */
+			Iterator<Entry<RMessage, ScheduledFuture<?>>> i = schedNacks
+					.entrySet().iterator();
+			while (i.hasNext()) {
+				Entry<RMessage, ScheduledFuture<?>> entry = i.next();
+				if (entry.getValue().isDone()) {
+					i.remove();
+				} else if (entry.getKey().hashCode() == ((RMessage) msg)
+						.hashCode()) {
+					entry.getValue().cancel(false);
+					i.remove();
+				}
+			}
 		}
 
 	}
@@ -258,10 +300,10 @@ public class UdpReliableChannel {
 				InetAddress address = InetAddress.getByName(IP_MULTICAST_GROUP);
 				DatagramPacket packet = new DatagramPacket(sendBuf,
 						sendBuf.length, address, MULTICAST_GROUP_PORT);
-				
-				System.out.println("R: sending:"+msg);
+
+				System.out.println("R: sending:" + msg);
 				multicastSocket.send(packet);
-				
+
 				os.close();
 
 			} catch (IOException e) {
