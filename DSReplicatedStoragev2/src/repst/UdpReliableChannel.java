@@ -33,7 +33,7 @@ public class UdpReliableChannel {
 	
 	//not in order, contains the massages received out of sequence 
 	ArrayList<RMessageContent> holdback = new ArrayList<RMessageContent>();
-
+	private String writeLock="";
 	private MulticastSocket multicastSocket;
 	private ExecutorService pool = Executors.newCachedThreadPool();
 	private Timer timer=new Timer(true);
@@ -258,10 +258,10 @@ public class UdpReliableChannel {
 				InetAddress address = InetAddress.getByName(IP_MULTICAST_GROUP);
 				DatagramPacket packet = new DatagramPacket(sendBuf,
 						sendBuf.length, address, MULTICAST_GROUP_PORT);
-				
-				System.out.println("R: sending:"+msg);
-				multicastSocket.send(packet);
-				
+				synchronized (writeLock) {	
+					System.out.println("R: sending:"+msg);
+					multicastSocket.send(packet);
+				}
 				os.close();
 
 			} catch (IOException e) {
