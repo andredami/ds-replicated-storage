@@ -52,8 +52,8 @@ public class UdpReliableChannel {
 	private ScheduledExecutorService nackPool = Executors
 			.newScheduledThreadPool(numOfMember);
 	private Map<RMessage, ScheduledFuture<?>> schedNacks = new HashMap<RMessage, ScheduledFuture<?>>();
-	private long NACK_SUPPRESSION_DELAY_MAX = 20;
-	private long NACK_SUPPRESSION_DELAY_MIN = 10;
+	private long NACK_SUPPRESSION_DELAY_MAX = 10 * 1000;
+	private long NACK_SUPPRESSION_DELAY_MIN = 3 * 1000;
 
 	private Timer timer = new Timer(true);
 	private Long lastClock = 0L;
@@ -214,13 +214,15 @@ public class UdpReliableChannel {
 		/**
 		 * NACK-SUPRESSION EXTENSION
 		 */
+		long delay = NACK_SUPPRESSION_DELAY_MIN
+				+ (int) (Math.random() * ((NACK_SUPPRESSION_DELAY_MAX - NACK_SUPPRESSION_DELAY_MIN) + 1));
 		schedNacks
 				.put(m,
 						nackPool.schedule(
 								new Sender(m),
-								NACK_SUPPRESSION_DELAY_MIN
-										+ (int) (Math.random() * ((NACK_SUPPRESSION_DELAY_MAX - NACK_SUPPRESSION_DELAY_MIN) + 1)),
+								delay,
 								TimeUnit.MILLISECONDS));
+		System.out.println("Scheduled NACK for message "+clock+":"+pid+" after " + (delay/1000) + " seconds");
 		// pool.execute(new Sender(m));
 	}
 
@@ -243,6 +245,7 @@ public class UdpReliableChannel {
 				} else if (entry.getKey().hashCode() == ((RMessage) msg)
 						.hashCode()) {
 					entry.getValue().cancel(false);
+					System.out.println("Suppressing NACK for message "+msg.getClock()+":"+msg.getProcessId());
 					i.remove();
 				}
 			}
