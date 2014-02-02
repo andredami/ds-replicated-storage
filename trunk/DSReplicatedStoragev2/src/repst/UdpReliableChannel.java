@@ -200,6 +200,7 @@ public class UdpReliableChannel {
 		if (msg.getProcessId() == procid) {
 			System.out.println("R: received: "+msg);
 			RMessageContent m = history.get(msg.getClock());
+			if(m==null){return;} //happens when old nack are received
 			m.setPiggyBackAcks((VectorAck) vectorAck.clone());
 			pool.execute(new Sender(m));
 		} else {
