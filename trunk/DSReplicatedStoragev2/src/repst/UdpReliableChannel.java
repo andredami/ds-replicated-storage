@@ -196,8 +196,9 @@ public class UdpReliableChannel {
 	}
 
 	private void elaborateNackReceived(RNack msg) {
-		System.out.println("R: received: "+msg);
+		
 		if (msg.getProcessId() == procid) {
+			System.out.println("R: received: "+msg);
 			RMessageContent m = history.get(msg.getClock());
 			m.setPiggyBackAcks((VectorAck) vectorAck.clone());
 			pool.execute(new Sender(m));
