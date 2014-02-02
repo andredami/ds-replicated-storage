@@ -25,9 +25,14 @@ public class RNack extends RMessage {
 		// TODO Auto-generated method stub
 		return "Rnack for:"+super.toString();
 	}
-	
-	/*
-	 * see equals in RMessage
-	 */
 
+	@Override
+	public int hashCode() {
+		return super.hashCode();
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		return super.equals(obj);
+	}
 }
