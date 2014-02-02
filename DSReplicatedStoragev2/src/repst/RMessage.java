@@ -45,8 +45,8 @@ public class RMessage implements Serializable {
 			return true;
 		if (obj == null)
 			return false;
-		if (getClass() != obj.getClass())
-			return false;
+//		if (getClass() != obj.getClass())
+//			return false;
 		RMessage other = (RMessage) obj;
 		if (clock != other.clock)
 			return false;
