@@ -70,7 +70,7 @@ public class LamportChannel {
 	}
 
 	private synchronized void insertInOrderingQueue(LMessage newMsg,int index) {
-		System.out.println("L:Inserting msg:"+newMsg.lamportclock+"."+newMsg.processId+" at "+index);
+		System.out.println("L: Inserting msg:"+newMsg.lamportclock+"."+newMsg.processId+" at "+index);
 		orderingQueue.add(index, newMsg);
 	}
 
