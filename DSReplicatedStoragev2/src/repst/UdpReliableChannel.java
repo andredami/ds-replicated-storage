@@ -244,10 +244,10 @@ public class UdpReliableChannel {
 				Entry<RMessage, ScheduledFuture<?>> entry = i.next();
 				if (entry.getValue().isDone()) {
 					i.remove();
-				} else if (entry.getKey().hashCode() == ((RMessage) msg)
-						.hashCode()) {
-					entry.getValue().cancel(false);
-					System.out.println("R: Suppressing NACK for message "+msg.getClock()+"."+msg.getProcessId());
+				} else if (entry.getKey().equals(msg)) {
+					if(entry.getValue().cancel(false)){
+						System.out.println("R: Suppressing NACK for message "+msg.getClock()+"."+msg.getProcessId());
+					}
 					i.remove();
 				}
 			}
