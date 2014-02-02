@@ -27,7 +27,11 @@ public class UdpReliableChannel {
 
 	VectorAck vectorAck;
 	HistoryBuffer history;
+	
+	//in order, contains  the message to be delivered to the upper layer
 	ArrayList<Serializable> delivery = new ArrayList<Serializable>();
+	
+	//not in order, contains the massages received out of sequence 
 	ArrayList<RMessageContent> holdback = new ArrayList<RMessageContent>();
 
 	private MulticastSocket multicastSocket;
@@ -139,8 +143,10 @@ public class UdpReliableChannel {
 
 	private void putInHoldbackQueue(RMessageContent msg) {
 		synchronized (holdback) {
-			System.out.println("R: in hold-back:"+msg);
-			holdback.add(msg);
+			if (!holdback.contains(msg)){//based on equals in Rmessage
+				System.out.println("R: in hold-back:"+msg);
+				holdback.add(msg);
+			}
 		}
 	}
 
