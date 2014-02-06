@@ -1,7 +1,6 @@
 package repst;
 
 import java.io.Serializable;
-import java.util.ArrayList;
 
 public class VectorAck implements Serializable{
 	
